@@ -202,6 +202,8 @@ def deploy_version(request,pid):
                 elif request.POST.get('model') == 'tag':result = version.delTag(path=project.project_repo_dir,tagName=request.POST.get('name')) 
             elif request.POST.get('op') == 'query':
                 if project.project_model == 'branch':
+                    version.checkOut(path=project.project_repo_dir, name=request.GET.get('name'))
+                    version.pull(path=project.project_repo_dir)                     
                     result = version.log(path=project.project_repo_dir,bName=request.POST.get('name'),number=50)
                     return JsonResponse({'msg':"操作成功","code":200,'data':result}) 
                 else:result = version.tag(path=project.project_repo_dir)
@@ -313,7 +315,7 @@ def deploy_run(request,pid):
                     try:
                         exclude = ''
                         for s in project.project_exclude.split(','):
-                            exclude =  "--exclude='{file}'".format(file=s.replace('\r\n','').replace('\n','').strip()) + ' ' + exclude
+                            exclude =  "--exclude={file}".format(file=s.replace('\r\n','').replace('\n','').strip()) + ' ' + exclude
                     except Exception,e:
                         return JsonResponse({'msg':str(e),"code":500,'data':[]})                             
                 #执行部署命令  - 编译型语言      
@@ -356,7 +358,7 @@ def deploy_run(request,pid):
                 resource.append(data)    
             DsRedis.OpsDeploy.lpush(project.project_uuid, data="[RSYNC start rsync project to remote server]")             
             if resource and hostList:
-                if exclude:args = '''src={srcDir} dest={desDir} links=yes recursive=yes compress=yes delete=yes rsync_opts="{exclude}"'''.format(srcDir=softdir, desDir=ds.dir,exclude=exclude)
+                if exclude:args = "src={srcDir} dest={desDir} links=yes recursive=yes compress=yes delete=yes rsync_opts='{exclude}'".format(srcDir=softdir, desDir=ds.dir,exclude=exclude.replace(' ',',')[:-1])
                 else:args = '''src={srcDir} dest={desDir} links=yes recursive=yes compress=yes delete=yes'''.format(srcDir=softdir, desDir=ds.dir)
                 ANS = ANSRunner(resource)
                 ANS.run_model(host_list=hostList,module_name='synchronize',module_args=args)
